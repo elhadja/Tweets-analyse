@@ -34,6 +34,10 @@ public class Tweet implements Serializable{
         row = counter;
     }
 
+    public String getLang() {
+        return lang;
+    }
+
 
    public String toString() {
         return "created_at: " + created_at + 

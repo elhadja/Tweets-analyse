@@ -120,6 +120,21 @@ public class TPSpark {
 			}
 		}
 
+		public static void createTableTweetsByLang(Connection connect) {
+			try {
+				final Admin admin = connect.getAdmin(); 
+				HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf("bah-simba_tweets_by_lang"));
+				tableDescriptor.addFamily(new HColumnDescriptor(TWEET_LANG_FAMILLY));
+				tableDescriptor.addFamily(new HColumnDescriptor(NUMBER_TWEETS_FAMILLY));
+				createOrOverwrite(admin, tableDescriptor);
+				admin.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+				System.exit(-1);
+			}
+		}
+
+
 		public static void computeNumberTweetsByUser(Connection connection, JavaRDD<Tweet> jsonRDD) {
 			final String localTable = "bah-simba_tweets_by_user";
 			createTableTweetsByUser(connection);
@@ -177,6 +192,63 @@ public class TPSpark {
 			hbasePuts.saveAsNewAPIHadoopDataset(newAPIJobConfiguration1.getConfiguration());
 		}
 
+
+		public static void computeNumberTweetsByLang(Connection connection, JavaRDD<Tweet> jsonRDD) {
+			final String localTable = "bah-simba_tweets_by_lang";
+			createTableTweetsByLang(connection);
+			JavaRDD<Iterable<Tweet>> newJsonRdd = jsonRDD
+						.groupBy(tweet -> tweet.getLang())
+						.values();
+			System.out.println("===> counttt: " + newJsonRdd.count());
+			JavaPairRDD<ImmutableBytesWritable, Put> hbasePuts = newJsonRdd.mapToPair(
+				iterable -> {
+					Iterator<Tweet> it = iterable.iterator();
+					long count = 0;
+					Tweet firstTweet = null;
+					if (it.hasNext()) {
+						firstTweet = it.next();
+						count += 1;
+					}
+					while(it.hasNext()) {
+						count += 1;
+						it.next();
+					}
+
+					Put put = new Put(Bytes.toBytes(firstTweet.getLang()));
+					put.addColumn(NUMBER_TWEETS_FAMILLY, Bytes.toBytes(""), Bytes.toBytes(String.valueOf(count)));
+
+					return new Tuple2<ImmutableBytesWritable, Put>(new ImmutableBytesWritable(), put);    
+				}
+			);
+
+			Configuration myConfig = null;
+			try {
+				myConfig =   HBaseConfiguration.create();
+				myConfig.set("hbase.mapred.outputtable", localTable);
+				myConfig.set("mapreduce.outputformat.class", "org.apache.hadoop.hbase.mapreduce.TableOutputFormat");
+				HBaseAdmin.checkHBaseAvailable(myConfig);
+				System.out.println("===> Hbase is running");
+			} catch (MasterNotRunningException e) {
+				System.out.println("===> Hbase is not running");
+				System.exit(1);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			myConfig.set("mapreduce.output.fileoutputformat.outputdir", "/tmp");
+		
+			Job newAPIJobConfiguration1 = null;
+			try {
+				newAPIJobConfiguration1 = Job.getInstance(myConfig);
+			} catch(Exception e) {
+				e.printStackTrace();
+				System.exit(-1);
+			}
+			newAPIJobConfiguration1.getConfiguration().set(TableOutputFormat.OUTPUT_TABLE, localTable);
+			newAPIJobConfiguration1.setOutputFormatClass(TableOutputFormat.class);
+
+			hbasePuts.saveAsNewAPIHadoopDataset(newAPIJobConfiguration1.getConfiguration());
+		}
+
 		public int run(String[] args) throws Exception {
 			final Connection connection = ConnectionFactory.createConnection(getConf());
 
@@ -197,6 +269,7 @@ public class TPSpark {
 			).filter(tweet -> tweet != null && tweet.user != null);
 
 			computeNumberTweetsByUser(connection, jsonRDD);
+			//computeNumberTweetsByLang(connection, jsonRDD);
 
 			/*
 			JavaPairRDD<ImmutableBytesWritable, Put> hbasePuts = jsonRDD.mapToPair(

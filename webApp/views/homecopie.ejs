@@ -37,18 +37,18 @@
             <div class="row">
                 <div class="col">
                     <h1>Nombre de tweets par langue</h1>
-                    <form action="/tweetsByLang">
+                    <form method="get" action="/tweetsByLang">
                       <button type="submit" class="btn btn-primary">compter</button>
                     </form>
                     <% if (typeof tweetsByLang != 'undefined') { %>
                     <div>
                         <ul class="list-group">
-                            <% tweetsByLang.list.forEach(item => { %>
+                            <% tweetsByLang.forEach(item) { %>
                                 <li class="list-group-item">
-                                    <%= item.key %> &ensp;
-                                    <%= item.$ %>
+                                    <%= item.lang %> &ensp;
+                                    <%= item.numberTweets %>
                                 </li>
-                            <% }); %>
+                            <% } %>
                         </ul>
                     </div>
                     <% } %>
@@ -57,6 +57,5 @@
  
         </div>
     </div>
-<
 </body>
 </html>
