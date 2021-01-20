@@ -74,7 +74,7 @@ public class TPSpark {
 		
 
 		private static final byte[] TABLE_NAME = Bytes.toBytes("elhadj_tweet");
-		private static final byte[] TABLE_NUMBER_TWEETS_BY_USER = Bytes.toBytes("bah_simba");
+		private static final byte[] TABLE_NUMBER_TWEETS_BY_USER = Bytes.toBytes("bah-simba_tweets_by_user");
 
 		public static void createOrOverwrite(Admin admin, HTableDescriptor table) throws IOException {
 			if (admin.tableExists(table.getTableName())) {
@@ -121,7 +121,7 @@ public class TPSpark {
 		}
 
 		public static void computeNumberTweetsByUser(Connection connection, JavaRDD<Tweet> jsonRDD) {
-			final String localTable = "bah_simba";
+			final String localTable = "bah-simba_tweets_by_user";
 			createTableTweetsByUser(connection);
 			JavaRDD<Iterable<Tweet>> newJsonRdd = jsonRDD
 						.groupBy(tweet -> tweet.user.getId())

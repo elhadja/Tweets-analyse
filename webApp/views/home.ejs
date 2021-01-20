@@ -3,15 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Spark project</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+    <script>
+        function myAction(form) {
+            form.action = "/user/tweets/" + document.querySelector("#userIdInput").value;
+            console.log("action: " , form.action);
+            form.submit();
+        }
+    </script>
 </head>
 <body>
     <div>
-        <h1>Compter le nombre de tweets d'un utilisateur</h1>
-        <form action="/user/tweets" method="get">
-            <input type="text" name="idUserInput" id="idUserInput"><br>
-            <button type="submit">compter</button>
-        </form>
+        <div class="container">
+            <div class="row">
+                <div class="col">
+                    <h1>Compter le nombre de tweets d'un utilisateur</h1>
+                    <form method="get" onsubmit="myAction(this)">
+                        <div class="form-group">
+                            <label for="userIdInput">Email address</label>
+                            <input type="text" class="form-control" id="userIdInput" aria-describedby="emailHelp" placeholder="Entrer l'id de l'utilisateur">
+                        </div>
+                       <button type="submit" class="btn btn-primary">compter</button>
+                    </form>
+                    <% if (typeof userInfos != 'undefined') { %>
+                    <div>
+                        <p>Nom: <%= userInfos.name %></p>
+                        <p>Nombre de tweets: <%= userInfos.numberTweets %></p>
+                    </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
         <div>
 
         </div>
