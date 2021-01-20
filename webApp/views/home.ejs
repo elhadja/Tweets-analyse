@@ -1,26 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spark project</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
-    <script>
-        function myAction(form) {
-            form.action = "/user/tweets/" + document.querySelector("#userIdInput").value;
-            console.log("action: " , form.action);
-            form.submit();
-        }
-
-        function myAction2(form) {
-            form.action = "/user/userHashtags/" + document.querySelector("#userIdInput2").value;
-            console.log("action: " , form.action);
-            form.submit();
-        }
- 
-    </script>
-</head>
+<%- include("head"); %>
 <body>
+    <div class="row">
+        <%- include('menu'); %>
+    </div>
     <div>
         <div class="container">
             <div class="row">

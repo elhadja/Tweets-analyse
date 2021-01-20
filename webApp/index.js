@@ -44,6 +44,17 @@ app.get('/', function (req, res) {
   res.render("home");
 });
 
+app.get('/hashtags', function (req, res) {
+  res.render("hashtags");
+});
+
+
+app.get('/influencers', function (req, res) {
+  res.render("influencers");
+});
+
+
+
 app.get("/tweetsByLang", (req, res) => {
   //*
   client
