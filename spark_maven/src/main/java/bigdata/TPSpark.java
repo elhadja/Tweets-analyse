@@ -66,6 +66,7 @@ public class TPSpark {
 		private static final byte[] TWEET_LANG_FAMILLY = Bytes.toBytes("lang");
 		private static final byte[] TWEET_USER_FAMILLY = Bytes.toBytes("user");
 		private static final byte[] TWEET_ENTITY_FAMILLY = Bytes.toBytes("entity");
+		private static final byte[] USER_HASHTAGS_FAMILLY = Bytes.toBytes("hashtags");
 
 
 		private static final byte[] USER_ID_FAMILLY = Bytes.toBytes("idUser");
@@ -75,6 +76,7 @@ public class TPSpark {
 
 		private static final byte[] TABLE_NAME = Bytes.toBytes("elhadj_tweet");
 		private static final byte[] TABLE_NUMBER_TWEETS_BY_USER = Bytes.toBytes("bah-simba_tweets_by_user");
+		private static final byte[] TABLE_USER_HASHTAGS = Bytes.toBytes("bah-simba_users_hashtags");
 
 		public static void createOrOverwrite(Admin admin, HTableDescriptor table) throws IOException {
 			if (admin.tableExists(table.getTableName())) {
@@ -134,6 +136,18 @@ public class TPSpark {
 			}
 		}
 
+		public static void createTableUsersHashtags(Connection connect) {
+			try {
+				final Admin admin = connect.getAdmin(); 
+				HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf("bah-simba_users_hashtags"));
+				tableDescriptor.addFamily(new HColumnDescriptor(USER_HASHTAGS_FAMILLY));
+				createOrOverwrite(admin, tableDescriptor);
+				admin.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+				System.exit(-1);
+			}
+		}
 
 		public static void computeNumberTweetsByUser(Connection connection, JavaRDD<Tweet> jsonRDD) {
 			final String localTable = "bah-simba_tweets_by_user";
@@ -249,6 +263,71 @@ public class TPSpark {
 			hbasePuts.saveAsNewAPIHadoopDataset(newAPIJobConfiguration1.getConfiguration());
 		}
 
+		public static void computeUsersHashtags(Connection connection, JavaRDD<Tweet> jsonRDD) {
+			final String localTable = "bah-simba_users_hashtags";
+			createTableUsersHashtags(connection);
+			jsonRDD  = jsonRDD
+						.filter(tweet -> tweet.entities != null && !tweet.entities.hastagsToString().equals(""));
+
+			System.out.println("==> first line" + jsonRDD.first());
+			System.out.println("==> first line hashtags: " + jsonRDD.first().entities.hastagsToString());
+
+			//*
+			JavaRDD<Iterable<Tweet>> newJsonRdd = jsonRDD
+						.groupBy(tweet -> tweet.user.getId())
+						.values();
+	
+			JavaPairRDD<ImmutableBytesWritable, Put> hbasePuts = newJsonRdd.mapToPair(
+				iterable -> {
+					Iterator<Tweet> it = iterable.iterator();
+					String hashtagsString = "";
+					Tweet firstTweet = null;
+					if (it.hasNext()) {
+						firstTweet = it.next();
+						hashtagsString += firstTweet.entities.hastagsToString();
+					}
+					while(it.hasNext()) {
+						hashtagsString += firstTweet.entities.hastagsToString();
+						it.next();
+					}
+
+					Put put = new Put(Bytes.toBytes(firstTweet.user.getId()));
+					put.addColumn(USER_HASHTAGS_FAMILLY, Bytes.toBytes(""), Bytes.toBytes(String.valueOf(hashtagsString)));
+
+					return new Tuple2<ImmutableBytesWritable, Put>(new ImmutableBytesWritable(), put);    
+				}
+			);
+			//*/
+
+			Configuration myConfig = null;
+			try {
+				myConfig =   HBaseConfiguration.create();
+				myConfig.set("hbase.mapred.outputtable", localTable);
+				myConfig.set("mapreduce.outputformat.class", "org.apache.hadoop.hbase.mapreduce.TableOutputFormat");
+				HBaseAdmin.checkHBaseAvailable(myConfig);
+				System.out.println("===> Hbase is running");
+			} catch (MasterNotRunningException e) {
+				System.out.println("===> Hbase is not running");
+				System.exit(1);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			myConfig.set("mapreduce.output.fileoutputformat.outputdir", "/tmp");
+		
+			Job newAPIJobConfiguration1 = null;
+			try {
+				newAPIJobConfiguration1 = Job.getInstance(myConfig);
+			} catch(Exception e) {
+				e.printStackTrace();
+				System.exit(-1);
+			}
+			newAPIJobConfiguration1.getConfiguration().set(TableOutputFormat.OUTPUT_TABLE, localTable);
+			newAPIJobConfiguration1.setOutputFormatClass(TableOutputFormat.class);
+
+			hbasePuts.saveAsNewAPIHadoopDataset(newAPIJobConfiguration1.getConfiguration());
+		}
+
+
 		public int run(String[] args) throws Exception {
 			final Connection connection = ConnectionFactory.createConnection(getConf());
 
@@ -268,91 +347,11 @@ public class TPSpark {
 				}
 			).filter(tweet -> tweet != null && tweet.user != null);
 
-			computeNumberTweetsByUser(connection, jsonRDD);
+			//computeNumberTweetsByUser(connection, jsonRDD);
 			//computeNumberTweetsByLang(connection, jsonRDD);
+			computeUsersHashtags(connection, jsonRDD);
 
-			/*
-			JavaPairRDD<ImmutableBytesWritable, Put> hbasePuts = jsonRDD.mapToPair(
-				tweet -> {
-					Put put = new Put(Bytes.toBytes("" + tweet.row));
-					put.addColumn(TWEET_CREATED_AT_FAMILY, Bytes.toBytes(""), Bytes.toBytes(tweet.created_at));
-					put.addColumn(TWEET_ID_FAMILLY, Bytes.toBytes(""), Bytes.toBytes(tweet.id));
-					put.addColumn(TWEET_ID_STR_FAMILLY, Bytes.toBytes(""), Bytes.toBytes(tweet.id_str));
-					put.addColumn(TWEET_TEXT_FAMILLY, Bytes.toBytes(""), Bytes.toBytes(tweet.text));
-					put.addColumn(TWEET_LANG_FAMILLY, Bytes.toBytes(""), Bytes.toBytes(tweet.lang));
-					if (tweet.user != null) {
-						put.addColumn(TWEET_USER_FAMILLY, Bytes.toBytes("id"), Bytes.toBytes(tweet.user.id));
-						put.addColumn(TWEET_USER_FAMILLY, Bytes.toBytes("name"), Bytes.toBytes(tweet.user.name));
-					}
-					if (tweet.entities != null) {
-						put.addColumn(TWEET_ENTITY_FAMILLY, Bytes.toBytes("hastags"), Bytes.toBytes(tweet.entities.hastagsToString()));
-					}
-					return new Tuple2<ImmutableBytesWritable, Put>(new ImmutableBytesWritable(), put);    
-				}
-			);
-			*/
-			// hbase config
-			/*
-			Configuration myConfig = null;
-			try {
-				myConfig =   HBaseConfiguration.create();
-				//conf.set(ZOOKEEPER_QUORUM, "comma seperated list of zookeeper quorum");
-				myConfig.set("hbase.mapred.outputtable", "elhadj_tweet");
-				myConfig.set("mapreduce.outputformat.class", "org.apache.hadoop.hbase.mapreduce.TableOutputFormat");
-				HBaseAdmin.checkHBaseAvailable(myConfig);
-				System.out.println("===> Hbase is running");
-			} catch (MasterNotRunningException e) {
-				System.out.println("===> Hbase is not running");
-				System.exit(1);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			//myConfig.set(TableInputFormat.INPUT_TABLE, "elhadj_tweet");
-			myConfig.set("mapreduce.output.fileoutputformat.outputdir", "/tmp");
-		
-			// new Hadoop API configuration
-			
-			Job newAPIJobConfiguration1 = Job.getInstance(myConfig);
-			newAPIJobConfiguration1.getConfiguration().set(TableOutputFormat.OUTPUT_TABLE, "elhadj_tweet");
-			newAPIJobConfiguration1.setOutputFormatClass(TableOutputFormat.class);
-			System.out.println("===> count: " + hbasePuts.count());
-			hbasePuts.saveAsNewAPIHadoopDataset(newAPIJobConfiguration1.getConfiguration());
-
-			// count the number of tweet for a user
-			final String filterId = "767354852";
-			long res = jsonRDD.filter(tweet -> (tweet.user != null && tweet.user.id.equals("767354852"))).count();
-			System.out.println("===> number of tweets for user " + filterId + ": " + res);
-
-			// group tweet by country
-			JavaPairRDD<String, Iterable<Tweet>> tweetsByLang = jsonRDD.filter(tweet -> !tweet.lang.equals("")).groupBy(tweet -> tweet.lang);
-
-			System.out.println("=> number of valid countries: " + tweetsByLang.count());
-			tweetsByLang.foreach(tuple -> {
-				int count = 0;
-				for (Tweet tweet : tuple._2()) {
-					count+=1;
-				}
-				System.out.println("=> " + tuple._1() + ": " + count);
-			});
-
-			// count user's hashtags
-			jsonRDD = jsonRDD.filter(tweet -> {
-				return (tweet.entities != null) && (tweet.entities.hashtags.size() > 0);
-			});
-
-			System.out.println("tweets with hastags: " + jsonRDD.count());
-
-			// just for debug
-			try {
-				System.out.println();
-				System.out.println(jsonRDD.first().toString());
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			System.out.println("==> first line" + fileRDD.first());
-			//*/
-
-			System.out.println("==> first line" + fileRDD.first());
+			//System.out.println("==> first line" + fileRDD.first());
 			return 0;
 		}
 	}

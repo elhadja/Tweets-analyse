@@ -9,6 +9,7 @@ var spark = new eclairjs();
 const TABLE_NAME = 'elhadj_tweet';
 const TABLE_NUMBER_TWEETS = 'bah-simba_tweets_by_user';
 const TABLE_NUMBER_TWEETS_BY_LANG = 'bah-simba_tweets_by_lang';
+const TABLE_USER_HASHTAGS = 'bah-simba_users_hashtags';
 
 const client = hbase({
   host: '127.0.0.1',
@@ -104,6 +105,31 @@ app.get('/user/tweets/:userId', (req, res) => {
         res.json(error);
       }
     })
+});
+
+app.get('/user/userHashtags/:userId', (req, res) => {
+  const userId = req.params.userId;
+  hbase()
+    .table(TABLE_USER_HASHTAGS)
+    .row(userId)
+    .get({from: 1285942515900}, (error, value) => {
+      if (!error) {
+        try {
+         console.log(value); 
+         let userHashtags = {
+           hashtags: value[0].$
+         }
+         res.render("home", {userHashtags})
+        } catch (error) {
+          res.json({error: "no such rows"})
+        }
+      }
+      else {
+        console.log("error: ", error);
+        res.json(error);
+      }
+    })
+
 });
  
 app.listen(3903)

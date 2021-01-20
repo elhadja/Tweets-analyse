@@ -11,6 +11,13 @@
             console.log("action: " , form.action);
             form.submit();
         }
+
+        function myAction2(form) {
+            form.action = "/user/userHashtags/" + document.querySelector("#userIdInput2").value;
+            console.log("action: " , form.action);
+            form.submit();
+        }
+ 
     </script>
 </head>
 <body>
@@ -54,6 +61,25 @@
                     <% } %>
                 </div>
             </div>
+
+            <div class="row">
+                <div class="col">
+                    <h1>Liste des hashtags pour un utilisateur</h1>
+                    <form method="get" onsubmit="myAction2(this)">
+                        <div class="form-group">
+                            <label for="userIdInput2">Id de l'utilisateur</label>
+                            <input type="text" class="form-control" id="userIdInput2" aria-describedby="emailHelp" placeholder="Entrer l'id de l'utilisateur">
+                        </div>
+                       <button type="submit" class="btn btn-primary">valider</button>
+                    </form>
+                   <% if (typeof userHashtags != 'undefined') { %>
+                    <div>
+                        <p><%= userHashtags.hashtags %></p>
+                    </div>
+                    <% } %>
+                </div>
+            </div>
+
  
         </div>
     </div>
