@@ -10,6 +10,7 @@ const TABLE_NAME = 'elhadj_tweet';
 const TABLE_NUMBER_TWEETS = 'bah-simba_tweets_by_user';
 const TABLE_NUMBER_TWEETS_BY_LANG = 'bah-simba_tweets_by_lang';
 const TABLE_USER_HASHTAGS = 'bah-simba_users_hashtags';
+const TABLE_USERS_BY_HASHTAG = 'bah-simba_users_by_hashtag';
 
 const client = hbase({
   host: '127.0.0.1',
@@ -36,6 +37,17 @@ hbase()
     console.log("bbase table_tweets_by_lang is reached");
   }
 });
+
+hbase()
+.table(TABLE_USERS_BY_HASHTAG)
+.schema(function(error, schema){
+  if (!schema) {
+    console.log("error: " + TABLE_USERS_BY_HASHTAG + " is not reached");
+  } else {
+    console.log(TABLE_USERS_BY_HASHTAG + " is reached");
+  }
+});
+
 
 
 app.set('view engine', 'ejs');
@@ -141,6 +153,32 @@ app.get('/user/userHashtags/:userId', (req, res) => {
       }
     })
 
+});
+
+app.get('/hashtag/usersByHashtag/:hashtagId', (req, res) => {
+  const hashtagId = req.params.hashtagId;
+  console.log(hashtagId);
+  hbase()
+    .table(TABLE_USERS_BY_HASHTAG)
+    .row(hashtagId)
+    .get({from: 1285942515900}, (error, value) => {
+      if (!error) {
+        try {
+         console.log(value); 
+         let users = {
+           value: value[0].$
+         }
+         res.render("hashtags", {users})
+        } catch (error) {
+          res.json({error: "no such rows"})
+        }
+      }
+      else {
+        console.log("error when getting row: ", error);
+        res.json(error);
+      }
+    })
+ 
 });
  
 app.listen(3903)

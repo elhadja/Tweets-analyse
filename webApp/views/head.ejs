@@ -17,6 +17,12 @@
             console.log("action: " , form.action);
             form.submit();
         }
- 
+
+        function myAction3(form) {
+            let param = document
+            form.action = "/hashtag/usersByHashtag/" + document.querySelector("#hashtagInput").value.replace("\\", "%");
+            console.log("action: " , form.action);
+            form.submit();
+        }
     </script>
 </head>

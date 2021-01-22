@@ -8,7 +8,7 @@ import java.util.ArrayList;
 public class Entity implements Serializable{
     public List<HashTag> hashtags = new ArrayList<>();
 
-    public List<HashTag> getHastags() {
+    public List<HashTag> getHashtags() {
         return hashtags;
     }
 

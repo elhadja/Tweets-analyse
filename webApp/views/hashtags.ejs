@@ -2,6 +2,23 @@
 <body>
     <div class="row"> <%- include("menu"); %> </div>
     <div class="container">
-
+                <div class="row">
+                <div class="col">
+                    <h1>Liste des utilisateurs d'un hashtag</h1>
+                    <form method="get" onsubmit="myAction3(this)">
+                        <div class="form-group">
+                            <label for="hashtagInput">Entrer un Hasthag</label>
+                            <input type="text" class="form-control" id="hashtagInput" aria-describedby="emailHelp">
+                        </div>
+                       <button type="submit" class="btn btn-primary">valider</button>
+                    </form>
+                   <% if (typeof users != 'undefined') { %>
+                    <div>
+                        <p><%= users.value %></p>
+                    </div>
+                    <% } %>
+                </div>
+            </div>
+ 
     </div>
 </body>
