@@ -31,5 +31,13 @@
             console.log("action: " , form.action);
             form.submit();
         }
+
+        function myAction5(form) {
+            let param = document.querySelector("#dayInput").value;
+            form.action = "/hashtag/topkByDay/" + param + "/" + document.querySelector("#topkByDayInput").value;
+            console.log("action: " , form.action);
+            form.submit();
+        }
+
     </script>
 </head>

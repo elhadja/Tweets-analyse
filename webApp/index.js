@@ -12,6 +12,7 @@ const TABLE_NUMBER_TWEETS_BY_LANG = 'bah-simba_tweets_by_lang';
 const TABLE_USER_HASHTAGS = 'bah-simba_users_hashtags';
 const TABLE_USERS_BY_HASHTAG = 'bah-simba_users_by_hashtag';
 const TABLE_TOPK_HASHTAGS = 'bah-simba_topK_hashtags';
+const TABLE_TOPK_HASHTAGS_By_DAY = 'bah-simba_topK_hashtags_by_day';
 
 const client = hbase({
   host: '127.0.0.1',
@@ -56,6 +57,12 @@ hbase()
     console.log("error: " + TABLE_TOPK_HASHTAGS + " is not reached");
 });
 
+hbase()
+.table(TABLE_TOPK_HASHTAGS_By_DAY)
+.schema(function(error, schema){
+  if (!schema)
+    console.log("error: " + TABLE_TOPK_HASHTAGS_By_DAY + " is not reached");
+});
 
 
 
@@ -196,7 +203,7 @@ app.get('/hashtag/topk/:k', (req, res) => {
   .table(TABLE_TOPK_HASHTAGS)
   .scan({}, (err, rows) => {
     if (!err) {
-      rows = rows.slice(0, parseInt(k, 10)*2);
+      rows = rows.sort((o1, o2) => {return o1.key - o2.key}).slice(0, parseInt(k, 10)*2);
       topk = {
         hashtags: rows
       }
@@ -207,5 +214,25 @@ app.get('/hashtag/topk/:k', (req, res) => {
   }) 
 
 });
+
+app.get('/hashtag/topkByDay/:day/:k', (req, res) => {
+  const k = req.params.k;
+  const day = req.params.day;
+  client
+  .table(TABLE_TOPK_HASHTAGS_By_DAY)
+  .scan({}, (err, rows) => {
+    if (!err) {
+      rows = rows.sort((o1, o2) => {return o1.key - o2.key}).slice(0, parseInt(k, 10)*2);
+      topkByDay = {
+        hashtags: rows
+      }
+      res.status(200).render("hashtags", {topkByDay});
+    } else {
+      res.json("erreur");
+    }
+  }) 
+
+});
+
  
 app.listen(3903)

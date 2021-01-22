@@ -182,6 +182,18 @@ public class TPSpark {
 			}
 		}
 
+		public static void createTableTopKHashtagsByDay(Connection connect) {
+			try {
+				final Admin admin = connect.getAdmin(); 
+				HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf("bah-simba_topK_hashtags_by_day"));
+				tableDescriptor.addFamily(new HColumnDescriptor(HASHTAGS_FAMILLY));
+				createOrOverwrite(admin, tableDescriptor);
+				admin.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+				System.exit(-1);
+			}
+		}
 
 
 		public static void computeNumberTweetsByUser(Connection connection, JavaRDD<Tweet> jsonRDD) {
@@ -436,10 +448,7 @@ public class TPSpark {
 							h1.mergeCounters(h2);
 							return h1;
 						}).values();
-			JavaRDD<HashTag> hehe = context.parallelize(pairRdd.top(10));
-			printRDD(hehe);
-			System.out.println("==> count: " + hehe.count());
-				
+			JavaRDD<HashTag> hehe = context.parallelize(pairRdd.top(1000));
 	
 			//*
 			
@@ -453,6 +462,64 @@ public class TPSpark {
 				}
 			);
 			//*/
+
+			Configuration myConfig = null;
+			try {
+				myConfig =   HBaseConfiguration.create();
+				myConfig.set("hbase.mapred.outputtable", localTable);
+				myConfig.set("mapreduce.outputformat.class", "org.apache.hadoop.hbase.mapreduce.TableOutputFormat");
+				HBaseAdmin.checkHBaseAvailable(myConfig);
+				System.out.println("===> Hbase is running");
+			} catch (MasterNotRunningException e) {
+				System.out.println("===> Hbase is not running");
+				System.exit(1);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			myConfig.set("mapreduce.output.fileoutputformat.outputdir", "/tmp");
+		
+			Job newAPIJobConfiguration1 = null;
+			try {
+				newAPIJobConfiguration1 = Job.getInstance(myConfig);
+			} catch(Exception e) {
+				e.printStackTrace();
+				System.exit(-1);
+			}
+			newAPIJobConfiguration1.getConfiguration().set(TableOutputFormat.OUTPUT_TABLE, localTable);
+			newAPIJobConfiguration1.setOutputFormatClass(TableOutputFormat.class);
+
+			hbasePuts.saveAsNewAPIHadoopDataset(newAPIJobConfiguration1.getConfiguration());
+		}
+
+
+		public static void computeTopKHashtagsByDay(Connection connection, JavaSparkContext context, JavaRDD<Tweet> jsonRDD) {
+			final String localTable = "bah-simba_topK_hashtags_by_day";
+
+			createTableTopKHashtagsByDay(connection);
+
+			JavaRDD<HashTag> pairRdd  = jsonRDD
+						.filter(tweet -> tweet.entities != null && !tweet.entities.hastagsToString().equals(""))
+						.flatMapToPair(tweet -> {
+							List<Tuple2<String, HashTag>> list = new ArrayList<>();
+							for (HashTag h : tweet.entities.getHashtags()) {
+								list.add(new Tuple2<>(h.getText(), h));
+							}
+							return list.iterator();
+						})
+						.reduceByKey((h1, h2) -> {
+							h1.mergeCounters(h2);
+							return h1;
+						}).values();
+			JavaRDD<HashTag> hehe = context.parallelize(pairRdd.top(10000));
+	
+			JavaPairRDD<ImmutableBytesWritable, Put> hbasePuts = hehe.zipWithIndex().mapToPair(
+				hashtag -> {
+					Put put = new Put(Bytes.toBytes("1" + String.valueOf(hashtag._2())));
+					put.addColumn(HASHTAGS_FAMILLY, Bytes.toBytes("name"), Bytes.toBytes(hashtag._1().getText()));
+					put.addColumn(HASHTAGS_FAMILLY, Bytes.toBytes("count"), Bytes.toBytes(String.valueOf(hashtag._1.getCounter())));
+					return new Tuple2<ImmutableBytesWritable, Put>(new ImmutableBytesWritable(), put);    
+				}
+			);
 
 			Configuration myConfig = null;
 			try {
@@ -507,7 +574,8 @@ public class TPSpark {
 			//computeNumberTweetsByLang(connection, jsonRDD);
 			//computeUsersHashtags(connection, jsonRDD);
 			//computeUsersByHashtag(connection, jsonRDD);
-			computeTopKHashtags(connection, jsonRDD, context);
+			//computeTopKHashtags(connection, jsonRDD, context);
+			computeTopKHashtagsByDay(connection, context, jsonRDD);
 
 			return 0;
 		}
