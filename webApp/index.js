@@ -182,9 +182,35 @@ app.get('/hashtag/usersByHashtag/:hashtagId', (req, res) => {
         try {
          console.log(value); 
          let users = {
-           value: value[0].$.split(",")
+           value: value[1].$.split(",")
          }
          res.render("hashtags", {users})
+        } catch (error) {
+          res.json({error: "no such rows"})
+        }
+      }
+      else {
+        console.log("error when getting row: ", error);
+        res.json(error);
+      }
+    })
+ 
+});
+
+app.get('/hashtag/count/:hashtagId', (req, res) => {
+  const hashtagId = req.params.hashtagId;
+  console.log(hashtagId);
+  hbase()
+    .table(TABLE_USERS_BY_HASHTAG)
+    .row(hashtagId)
+    .get({from: 1285942515900}, (error, value) => {
+      if (!error) {
+        try {
+         console.log(value); 
+         let countResponse = {
+           value: value[0].$
+         }
+         res.render("hashtags", {countResponse})
         } catch (error) {
           res.json({error: "no such rows"})
         }

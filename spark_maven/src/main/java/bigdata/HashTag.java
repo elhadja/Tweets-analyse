@@ -8,6 +8,7 @@ public class HashTag implements Serializable, Comparable {
     private int counter;
     private int id;
     private static int staticId;
+    private String usersNames = "";
 
     public HashTag() {
         this.counter = 1;
@@ -27,8 +28,20 @@ public class HashTag implements Serializable, Comparable {
         return counter;
     }
 
+    public String getUsersNames() {
+        return usersNames;
+    }
+
+    public void setUsersrNames(String userName) {
+        this.usersNames = userName;
+    }
+
     public void mergeCounters(HashTag other) {
         this.counter += other.getCounter();
+    }
+
+    public void mergeUsersNames(HashTag other) {
+        this.usersNames += (other.usersNames + ",");
     }
 
     public int compareTo(Object other) {

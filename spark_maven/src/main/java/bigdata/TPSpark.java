@@ -160,6 +160,7 @@ public class TPSpark {
 				final Admin admin = connect.getAdmin(); 
 				HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf("bah-simba_users_by_hashtag"));
 				tableDescriptor.addFamily(new HColumnDescriptor(HASHTAGS_USERS_FAMILLY));
+				tableDescriptor.addFamily(new HColumnDescriptor(COUNT_FAMILLY));
 				createOrOverwrite(admin, tableDescriptor);
 				admin.close();
 			} catch (Exception e) {
@@ -377,21 +378,27 @@ public class TPSpark {
 		public static void computeUsersByHashtag(Connection connection, JavaRDD<Tweet> jsonRDD) {
 			final String localTable = "bah-simba_users_by_hashtag";
 			createTableUsersByHashtag(connection);
-			JavaPairRDD<String, String> pairRdd  = jsonRDD
+			JavaPairRDD<String, HashTag> pairRdd  = jsonRDD
 						.filter(tweet -> tweet.entities != null && !tweet.entities.hastagsToString().equals(""))
 						.flatMapToPair(tweet -> {
-							List<Tuple2<String, String>> list = new ArrayList<>();
+							List<Tuple2<String, HashTag>> list = new ArrayList<>();
 							for (HashTag h : tweet.entities.getHashtags()) {
-								list.add(new Tuple2<>(h.getText(), tweet.user.getName()));
+								h.setUsersrNames(tweet.user.getName());
+								list.add(new Tuple2<>(h.getText(), h));
 							}
 							return list.iterator();
 						})
-						.reduceByKey((name1, name2) -> name1 + "," + name2);
+						.reduceByKey((h1, h2) -> {
+							h1.mergeUsersNames(h2);
+							h1.mergeCounters(h2);
+							return h1;
+						});
 	
 			JavaPairRDD<ImmutableBytesWritable, Put> hbasePuts = pairRdd.mapToPair(
 				tuple -> {
 					Put put = new Put(Bytes.toBytes(tuple._1()));
-					put.addColumn(HASHTAGS_USERS_FAMILLY, Bytes.toBytes(""), Bytes.toBytes(tuple._2()));
+					put.addColumn(HASHTAGS_USERS_FAMILLY, Bytes.toBytes(""), Bytes.toBytes(tuple._2().getUsersNames()));
+					put.addColumn(COUNT_FAMILLY, Bytes.toBytes(""), Bytes.toBytes(String.valueOf(tuple._2().getCounter())));
 
 					return new Tuple2<ImmutableBytesWritable, Put>(new ImmutableBytesWritable(), put);    
 				}
@@ -573,9 +580,9 @@ public class TPSpark {
 			//computeNumberTweetsByUser(connection, jsonRDD);
 			//computeNumberTweetsByLang(connection, jsonRDD);
 			//computeUsersHashtags(connection, jsonRDD);
-			//computeUsersByHashtag(connection, jsonRDD);
+			computeUsersByHashtag(connection, jsonRDD);
 			//computeTopKHashtags(connection, jsonRDD, context);
-			computeTopKHashtagsByDay(connection, context, jsonRDD);
+			//computeTopKHashtagsByDay(connection, context, jsonRDD);
 
 			return 0;
 		}
