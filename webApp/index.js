@@ -11,6 +11,7 @@ const TABLE_NUMBER_TWEETS = 'bah-simba_tweets_by_user';
 const TABLE_NUMBER_TWEETS_BY_LANG = 'bah-simba_tweets_by_lang';
 const TABLE_USER_HASHTAGS = 'bah-simba_users_hashtags';
 const TABLE_USERS_BY_HASHTAG = 'bah-simba_users_by_hashtag';
+const TABLE_TOPK_HASHTAGS = 'bah-simba_topK_hashtags';
 
 const client = hbase({
   host: '127.0.0.1',
@@ -47,6 +48,14 @@ hbase()
     console.log(TABLE_USERS_BY_HASHTAG + " is reached");
   }
 });
+
+hbase()
+.table(TABLE_TOPK_HASHTAGS)
+.schema(function(error, schema){
+  if (!schema)
+    console.log("error: " + TABLE_TOPK_HASHTAGS + " is not reached");
+});
+
 
 
 
@@ -179,6 +188,24 @@ app.get('/hashtag/usersByHashtag/:hashtagId', (req, res) => {
       }
     })
  
+});
+
+app.get('/hashtag/topk/:k', (req, res) => {
+  const k = req.params.k;
+  client
+  .table(TABLE_TOPK_HASHTAGS)
+  .scan({}, (err, rows) => {
+    if (!err) {
+      rows = rows.slice(0, parseInt(k, 10)*2);
+      topk = {
+        hashtags: rows
+      }
+      res.status(200).render("hashtags", {topk});
+    } else {
+      res.json("erreur");
+    }
+  }) 
+
 });
  
 app.listen(3903)

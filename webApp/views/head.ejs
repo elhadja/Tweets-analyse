@@ -24,5 +24,12 @@
             console.log("action: " , form.action);
             form.submit();
         }
+
+        function myAction4(form) {
+            let param = document
+            form.action = "/hashtag/topk/" + document.querySelector("#topkInput").value;
+            console.log("action: " , form.action);
+            form.submit();
+        }
     </script>
 </head>

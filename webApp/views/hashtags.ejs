@@ -2,23 +2,51 @@
 <body>
     <div class="row"> <%- include("menu"); %> </div>
     <div class="container">
-                <div class="row">
-                <div class="col">
-                    <h1>Liste des utilisateurs d'un hashtag</h1>
-                    <form method="get" onsubmit="myAction3(this)">
-                        <div class="form-group">
-                            <label for="hashtagInput">Entrer un Hasthag</label>
-                            <input type="text" class="form-control" id="hashtagInput" aria-describedby="emailHelp">
-                        </div>
-                       <button type="submit" class="btn btn-primary">valider</button>
-                    </form>
-                   <% if (typeof users != 'undefined') { %>
-                    <div>
-                        <p><%= users.value %></p>
+        <div class="row">
+            <div class="col">
+                <h1>Liste des utilisateurs d'un hashtag</h1>
+                <form method="get" onsubmit="myAction3(this)">
+                    <div class="form-group">
+                        <label for="hashtagInput">Entrer un Hasthag</label>
+                        <input type="text" class="form-control" id="hashtagInput" aria-describedby="emailHelp">
                     </div>
-                    <% } %>
+                <button type="submit" class="btn btn-primary">valider</button>
+                </form>
+            <% if (typeof users != 'undefined') { %>
+                <div>
+                    <p><%= users.value %></p>
                 </div>
+                <% } %>
             </div>
+        </div>
+
+        <div class="row">
+            <div class="col">
+                <h1>Top k des hashtags les plus utilisés</h1>
+                <form method="get" onsubmit="myAction4(this)">
+                    <div class="form-group">
+                        <label for="topkInput">Entrer un Hasthag</label>
+                        <input type="number" class="form-control" id="topkInput" aria-describedby="emailHelp" min="1" max="1000">
+                    </div>
+                <button type="submit" class="btn btn-primary">valider</button>
+                </form>
+            <% if (typeof topk != 'undefined') { %>
+                <div>
+                        <ul class="list-group">
+                            <% topk.hashtags.forEach((item, index) => { %>
+                                <% if (index % 2 === 0) { %>
+                                <li class="list-group-item">
+                                    <%= topk.hashtags[index+1].$ %> &ensp;
+                                    <%= item.$ %> 
+                                </li>
+                                <% } %>
+                            <% }); %>
+                        </ul>
+                </div>
+            <% } %>
+            </div>
+        </div>
+
  
     </div>
 </body>
