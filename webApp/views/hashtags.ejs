@@ -14,11 +14,36 @@
                 </form>
             <% if (typeof users != 'undefined') { %>
                 <div>
-                    <p><%= users.value %></p>
+                        <ul class="list-group">
+                            <% users.value.forEach((item) => { %>
+                                <li class="list-group-item">
+                                    <span><%= item %></span> 
+                                </li>
+                            <% }); %>
+                        </ul>
                 </div>
                 <% } %>
             </div>
         </div>
+
+        <div class="row">
+            <div class="col">
+                <h1>Nombre d'appartion d'un hashtag</h1>
+                <form method="get" onsubmit="myAction6(this)">
+                    <div class="form-group">
+                        <label for="hashtagInput2">Entrer un Hasthag</label>
+                        <input type="text" class="form-control" id="hashtagInput2" aria-describedby="emailHelp" required>
+                    </div>
+                <button type="submit" class="btn btn-primary">compter</button>
+                </form>
+            <% if (typeof countResponse != 'undefined') { %>
+                <div>
+                    <p><%= countResponse.value %></p> 
+                </div>
+                <% } %>
+            </div>
+        </div>
+
 
         <div class="row">
             <div class="col">

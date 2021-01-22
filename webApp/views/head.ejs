@@ -39,5 +39,11 @@
             form.submit();
         }
 
+        function myAction6(form) {
+            let param = document.querySelector("#hashtagInput2").value;
+            form.action = "/hashtag/count/" + param;
+            console.log("action: " , form.action);
+            form.submit();
+        }
     </script>
 </head>
