@@ -182,7 +182,7 @@ app.get('/hashtag/usersByHashtag/:hashtagId', (req, res) => {
         try {
          console.log(value); 
          let users = {
-           value: value[0].$
+           value: value[0].$.split(",")
          }
          res.render("hashtags", {users})
         } catch (error) {

@@ -14,7 +14,13 @@
                 </form>
             <% if (typeof users != 'undefined') { %>
                 <div>
-                    <p><%= users.value %></p>
+                        <ul class="list-group">
+                            <% users.value.forEach((item) => { %>
+                                <li class="list-group-item">
+                                    <span><%= item %></span> 
+                                </li>
+                            <% }); %>
+                        </ul>
                 </div>
                 <% } %>
             </div>
