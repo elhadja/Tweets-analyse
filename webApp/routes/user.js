@@ -24,8 +24,10 @@ router.get('/tweets/:userId', (req, res) => {
         }
       }
       else {
-        console.log("error: ", error);
-        res.json(error);
+        error = {
+          value: "user not found"
+        }
+        res.render("home", {error});
       }
     })
 });
@@ -47,8 +49,10 @@ router.get('/userHashtags/:userId', (req, res) => {
         }
       }
       else {
-        console.log("error: ", error);
-        res.json(error);
+        error = {
+          value: "user not found"
+        }
+        res.render("home", {error});
       }
     })
 
@@ -60,7 +64,7 @@ router.get("/tweetsByLang", (req, res) => {
   .scan({}, (err, rows) => {
     if (!err) {
       tweetsByLang = {
-        list: rows
+        list: rows.sort((a, b) => b.$ - a.$)
       };
       res.render("home", {tweetsByLang});
     } else {

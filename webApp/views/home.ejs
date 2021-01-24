@@ -12,16 +12,22 @@
                     <h1>Compter le nombre de tweets d'un utilisateur</h1>
                     <form method="get" onsubmit="setAction(this,'/user/tweets', 'userIdInput')">
                         <div class="form-group">
-                            <label for="userIdInput">Email address</label>
-                            <input type="text" class="form-control" id="userIdInput" aria-describedby="emailHelp" placeholder="Entrer l'id de l'utilisateur">
+                            <input type="text" class="form-control" id="userIdInput" aria-describedby="emailHelp" placeholder="Entrer l'id de l'utilisateur" required>
                         </div>
                        <button type="submit" class="btn btn-primary">compter</button>
                     </form>
                     <% if (typeof userInfos != 'undefined') { %>
                     <div>
-                        <p>Nom: <%= userInfos.name %></p>
-                        <p>Nombre de tweets: <%= userInfos.numberTweets %></p>
+                        <p>
+                            Nom: <%= userInfos.name %> <br>
+                            Nombre de tweets: <%= userInfos.numberTweets %>
+                        </p>
                     </div>
+                    <% } %>
+
+                    <% if (typeof error != 'undefined') { %>
+                        <p class="error"><%= error.value %></p>
+                        <% error = undefined; %>
                     <% } %>
                 </div>
             </div>
@@ -32,7 +38,7 @@
                       <button type="submit" class="btn btn-primary">compter</button>
                     </form>
                     <% if (typeof tweetsByLang != 'undefined') { %>
-                    <div>
+                    <div class="tooMuch">
                         <ul class="list-group">
                             <% tweetsByLang.list.forEach(item => { %>
                                 <li class="list-group-item">
@@ -51,15 +57,28 @@
                     <h1>Liste des hashtags pour un utilisateur</h1>
                     <form method="get" onsubmit="setAction(this,'/user/userHashtags', 'userIdInput2')">
                         <div class="form-group">
-                            <label for="userIdInput2">Id de l'utilisateur</label>
-                            <input type="text" class="form-control" id="userIdInput2" aria-describedby="emailHelp" placeholder="Entrer l'id de l'utilisateur">
+                            <input type="text" class="form-control" id="userIdInput2" aria-describedby="emailHelp" placeholder="Entrer l'id de l'utilisateur" required>
                         </div>
                        <button type="submit" class="btn btn-primary">valider</button>
+
                     </form>
                    <% if (typeof userHashtags != 'undefined') { %>
-                    <div>
-                        <p><%= userHashtags.hashtags %></p>
+                    <div class="result">
+                        <ul class="list-group">
+                            <% userHashtags.hashtags.split(",").forEach(item => { %>
+                                <% if (item !== "") { %>
+                                <li class="list-group-item">
+                                    <%= item %>
+                                </li>
+                                <% } %>
+                            <% }); %>
+                        </ul>
+
                     </div>
+                    <% } %>
+                   <% if (typeof error != 'undefined') { %>
+                        <p class="error"><%= error.value %></p>
+                        <% error = undefined; %>
                     <% } %>
                 </div>
             </div>
