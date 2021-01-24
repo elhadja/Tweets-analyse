@@ -1,11 +1,15 @@
 <%- include("head"); %>
 <body>
-    <div class="row"> <%- include("menu"); %> </div>
     <div class="container">
+        <div class="row"> 
+            <div class="col">
+                <%- include("menu"); %>
+            </div>
+         </div>
         <div class="row">
             <div class="col">
                 <h1>Liste des utilisateurs d'un hashtag</h1>
-                <form method="get" onsubmit="myAction3(this)">
+                <form method="get" onsubmit="setAction(this,'/hashtag/usersByHashtag', 'hashtagInput')">
                     <div class="form-group">
                         <label for="hashtagInput">Entrer un Hasthag</label>
                         <input type="text" class="form-control" id="hashtagInput" aria-describedby="emailHelp" required>
@@ -29,7 +33,7 @@
         <div class="row">
             <div class="col">
                 <h1>Nombre d'appartion d'un hashtag</h1>
-                <form method="get" onsubmit="myAction6(this)">
+                <form method="get" onsubmit="setAction(this,'/hashtag/count', 'hashtagInput2')">
                     <div class="form-group">
                         <label for="hashtagInput2">Entrer un Hasthag</label>
                         <input type="text" class="form-control" id="hashtagInput2" aria-describedby="emailHelp" required>
@@ -48,7 +52,7 @@
         <div class="row">
             <div class="col">
                 <h1>Top k des hashtags les plus utilisés</h1>
-                <form method="get" onsubmit="myAction4(this)">
+                <form method="get" onsubmit="setAction(this,'/hashtag/topk', 'topkInput')">
                     <div class="form-group">
                         <label for="topkInput">Entrer un Hasthag</label>
                         <input type="number" class="form-control" id="topkInput" aria-describedby="emailHelp" min="1" max="1000" required>

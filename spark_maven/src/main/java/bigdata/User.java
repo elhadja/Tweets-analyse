@@ -2,7 +2,7 @@ package bigdata;
 
 import java.io.Serializable;
 
-public class User implements Serializable{
+public class User implements Serializable {
     public String id = "";
     private String id_str;
     public String name = "";
@@ -20,12 +20,35 @@ public class User implements Serializable{
     private String utc_offset;
     private String time_zone;
 
+    private int numberTweets = 1;
+    private String hashtags;
+
     public String getName() {
         return this.name;
     }
 
     public String getId() {
         return this.id;
+    }
+
+    public int getNumberTweets() {
+        return numberTweets;
+    }
+
+    public String getHashtags() {
+        return hashtags;
+    }
+
+    public void addHashtag(String hashtag) {
+        this.hashtags = hashtag;
+    }
+
+    public void mergeHashtags(User other) {
+        this.hashtags += (other.hashtags + ",");
+    }
+
+    public void mergeNumberTweets(User other) {
+        this.numberTweets += other.getNumberTweets();
     }
 
     public String toString() {
