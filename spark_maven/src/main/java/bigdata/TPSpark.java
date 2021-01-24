@@ -255,34 +255,51 @@ public class TPSpark {
 		}
 
 
-		public static void computeNumberTweetsByLang(Connection connection, JavaRDD<Tweet> jsonRDD) {
+		public static void computeNumberTweetsByLang(Connection connection, JavaSparkContext context) {
 			final String localTable = "bah-simba_tweets_by_lang";
 			createTableTweetsByLang(connection);
-			JavaRDD<Iterable<Tweet>> newJsonRdd = jsonRDD
-						.groupBy(tweet -> tweet.getLang())
-						.values();
-			System.out.println("===> counttt: " + newJsonRdd.count());
-			JavaPairRDD<ImmutableBytesWritable, Put> hbasePuts = newJsonRdd.mapToPair(
-				iterable -> {
-					Iterator<Tweet> it = iterable.iterator();
-					long count = 0;
-					Tweet firstTweet = null;
-					if (it.hasNext()) {
-						firstTweet = it.next();
-						count += 1;
-					}
-					while(it.hasNext()) {
-						count += 1;
-						it.next();
-					}
 
-					Put put = new Put(Bytes.toBytes(firstTweet.getLang()));
-					put.addColumn(NUMBER_TWEETS_FAMILLY, Bytes.toBytes(""), Bytes.toBytes(String.valueOf(count)));
+			JavaPairRDD<String, Integer> unionRdds = JavaPairRDD.fromJavaRDD(context.emptyRDD());
 
-					return new Tuple2<ImmutableBytesWritable, Put>(new ImmutableBytesWritable(), put);    
+
+			for (int i=1; i<=21; i++) {
+				String path = (i < 10) ? "/raw_data/tweet_0" + i + "_03_2020.nljson" : "/raw_data/tweet_" + i + "_03_2020.nljson";
+				JavaRDD<Tweet> jsonRDD = loadAndParseFileFromHDFS(context, path);
+				unionRdds = jsonRDD
+						.mapToPair(tweet -> new Tuple2<>(tweet.getLang(), 1))
+						.reduceByKey((n1, n2) -> n1 + n2)
+						.union(unionRdds)
+						.reduceByKey((n1, n2) -> n1 + n2);
+			}
+
+			JavaPairRDD<ImmutableBytesWritable, Put> hbasePuts = unionRdds.mapToPair(tuple -> {
+							Put put = new Put(Bytes.toBytes(tuple._1()));
+							put.addColumn(NUMBER_TWEETS_FAMILLY, Bytes.toBytes(""), Bytes.toBytes(String.valueOf(tuple._2())));
+							return new Tuple2<ImmutableBytesWritable, Put>(new ImmutableBytesWritable(), put);    
+						});
+
+			Configuration myConfig = getHbaseConfiguration(localTable);
+			Job newAPIJobConfiguration1 = getNewAPIJobConfiguration(localTable, myConfig);
+
+			hbasePuts.saveAsNewAPIHadoopDataset(newAPIJobConfiguration1.getConfiguration());
+		}
+
+		public static JavaRDD<Tweet> loadAndParseFileFromHDFS(JavaSparkContext context, String path) {
+			JavaRDD<String> fileRDD = context.textFile(path);
+			JavaRDD<Tweet> jsonRDD = fileRDD.map(
+				line -> {
+					GsonBuilder gson = new GsonBuilder();
+					Tweet tweet = null;
+					try {
+						tweet = gson.create().fromJson(line, Tweet.class);
+					} catch (Exception e) {}
+					return tweet;
 				}
-			);
+			).filter(tweet -> tweet != null && tweet.user != null);
+			return jsonRDD;
+		}
 
+		public static Configuration getHbaseConfiguration(String localTable) {
 			Configuration myConfig = null;
 			try {
 				myConfig =   HBaseConfiguration.create();
@@ -297,7 +314,11 @@ public class TPSpark {
 				e.printStackTrace();
 			}
 			myConfig.set("mapreduce.output.fileoutputformat.outputdir", "/tmp");
-		
+
+			return myConfig;
+		}
+
+		public static Job getNewAPIJobConfiguration(String localTable, Configuration myConfig) {
 			Job newAPIJobConfiguration1 = null;
 			try {
 				newAPIJobConfiguration1 = Job.getInstance(myConfig);
@@ -305,10 +326,7 @@ public class TPSpark {
 				e.printStackTrace();
 				System.exit(-1);
 			}
-			newAPIJobConfiguration1.getConfiguration().set(TableOutputFormat.OUTPUT_TABLE, localTable);
-			newAPIJobConfiguration1.setOutputFormatClass(TableOutputFormat.class);
-
-			hbasePuts.saveAsNewAPIHadoopDataset(newAPIJobConfiguration1.getConfiguration());
+			return newAPIJobConfiguration1;
 		}
 
 		public static void computeUsersHashtags(Connection connection, JavaRDD<Tweet> jsonRDD) {
@@ -565,6 +583,7 @@ public class TPSpark {
 			conf.set("spark.hadoop.validateOutputSpecs", "false");
 			JavaSparkContext context = new JavaSparkContext(conf);
 
+			/*
 			JavaRDD<String> fileRDD = context.textFile(args[0]);
 			JavaRDD<Tweet> jsonRDD = fileRDD.map(
 				line -> {
@@ -576,11 +595,12 @@ public class TPSpark {
 					return tweet;
 				}
 			).filter(tweet -> tweet != null && tweet.user != null);
+			*/
 
 			//computeNumberTweetsByUser(connection, jsonRDD);
-			//computeNumberTweetsByLang(connection, jsonRDD);
+			computeNumberTweetsByLang(connection, context);
 			//computeUsersHashtags(connection, jsonRDD);
-			computeUsersByHashtag(connection, jsonRDD);
+			//computeUsersByHashtag(connection, jsonRDD);
 			//computeTopKHashtags(connection, jsonRDD, context);
 			//computeTopKHashtagsByDay(connection, context, jsonRDD);
 
