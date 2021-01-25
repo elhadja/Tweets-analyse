@@ -9,6 +9,7 @@ public class HashTag implements Serializable, Comparable {
     private int id;
     private static int staticId;
     private String usersNames = "";
+    private int numDay;
 
     public HashTag() {
         this.counter = 1;
@@ -34,6 +35,14 @@ public class HashTag implements Serializable, Comparable {
 
     public void setUsersrNames(String userName) {
         this.usersNames = userName;
+    }
+
+    public void setNumDay(int numDay) {
+        this.numDay = numDay;
+    }
+
+    public int getNumDay() {
+        return numDay;
     }
 
     public void mergeCounters(HashTag other) {
