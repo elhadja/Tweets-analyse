@@ -353,10 +353,15 @@ public class TPSpark {
 			hbasePuts.saveAsNewAPIHadoopDataset(newAPIJobConfiguration1.getConfiguration());
 		}
 
-		public static void computeUsersByHashtag(Connection connection, JavaRDD<Tweet> jsonRDD) {
+		public static void computeUsersByHashtag(Connection connection, JavaSparkContext context) {
 			final String localTable = "bah-simba_users_by_hashtag";
 			createTableUsersByHashtag(connection);
-			JavaPairRDD<String, HashTag> pairRdd  = jsonRDD
+
+			JavaPairRDD<String, HashTag> unionRdds = JavaPairRDD.fromJavaRDD(context.emptyRDD());
+			for (int i=1; i<=1; i++) {
+				String path = getPath(1);
+				JavaRDD<Tweet> jsonRDD = loadAndParseFileFromHDFS(context, path);
+				unionRdds = jsonRDD
 						.filter(tweet -> tweet.entities != null && !tweet.entities.hastagsToString().equals(""))
 						.flatMapToPair(tweet -> {
 							List<Tuple2<String, HashTag>> list = new ArrayList<>();
@@ -367,12 +372,19 @@ public class TPSpark {
 							return list.iterator();
 						})
 						.reduceByKey((h1, h2) -> {
-							h1.mergeUsersNames(h2);
 							h1.mergeCounters(h2);
+							h1.mergeUsersNames(h2);
+							return h1;
+						})
+						.union(unionRdds)
+						.reduceByKey((h1, h2) -> {
+							h1.mergeCounters(h2);
+							h1.mergeUsersNames(h2);
 							return h1;
 						});
+			}
 	
-			JavaPairRDD<ImmutableBytesWritable, Put> hbasePuts = pairRdd.mapToPair(
+			JavaPairRDD<ImmutableBytesWritable, Put> hbasePuts = unionRdds.mapToPair(
 				tuple -> {
 					Put put = new Put(Bytes.toBytes(tuple._1()));
 					put.addColumn(HASHTAGS_USERS_FAMILLY, Bytes.toBytes(""), Bytes.toBytes(tuple._2().getUsersNames()));
@@ -381,32 +393,9 @@ public class TPSpark {
 					return new Tuple2<ImmutableBytesWritable, Put>(new ImmutableBytesWritable(), put);    
 				}
 			);
-			//*/
 
-			Configuration myConfig = null;
-			try {
-				myConfig =   HBaseConfiguration.create();
-				myConfig.set("hbase.mapred.outputtable", localTable);
-				myConfig.set("mapreduce.outputformat.class", "org.apache.hadoop.hbase.mapreduce.TableOutputFormat");
-				HBaseAdmin.checkHBaseAvailable(myConfig);
-				System.out.println("===> Hbase is running");
-			} catch (MasterNotRunningException e) {
-				System.out.println("===> Hbase is not running");
-				System.exit(1);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			myConfig.set("mapreduce.output.fileoutputformat.outputdir", "/tmp");
-		
-			Job newAPIJobConfiguration1 = null;
-			try {
-				newAPIJobConfiguration1 = Job.getInstance(myConfig);
-			} catch(Exception e) {
-				e.printStackTrace();
-				System.exit(-1);
-			}
-			newAPIJobConfiguration1.getConfiguration().set(TableOutputFormat.OUTPUT_TABLE, localTable);
-			newAPIJobConfiguration1.setOutputFormatClass(TableOutputFormat.class);
+			Configuration myConfig = getHbaseConfiguration(localTable);
+			Job newAPIJobConfiguration1 = getNewAPIJobConfiguration(localTable, myConfig);
 
 			hbasePuts.saveAsNewAPIHadoopDataset(newAPIJobConfiguration1.getConfiguration());
 		}
@@ -512,25 +501,11 @@ public class TPSpark {
 			conf.set("spark.hadoop.validateOutputSpecs", "false");
 			JavaSparkContext context = new JavaSparkContext(conf);
 
-			/*
-			JavaRDD<String> fileRDD = context.textFile(args[0]);
-			JavaRDD<Tweet> jsonRDD = fileRDD.map(
-				line -> {
-					GsonBuilder gson = new GsonBuilder();
-					Tweet tweet = null;
-					try {
-						tweet = gson.create().fromJson(line, Tweet.class);
-					} catch (Exception e) {}
-					return tweet;
-				}
-			).filter(tweet -> tweet != null && tweet.user != null);
-			//*/
-
 			//computeNumberTweetsByUser(connection, context);
 			//computeNumberTweetsByLang(connection, context);
 			//computeUsersHashtags(connection, context);
-			//computeUsersByHashtag(connection, jsonRDD);
-			computeTopKHashtags(connection, context);
+			computeUsersByHashtag(connection, context);
+			//computeTopKHashtags(connection, context);
 			//computeTopKHashtagsByDay(connection, context);
 
 			return 0;
