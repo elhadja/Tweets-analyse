@@ -417,10 +417,15 @@ public class TPSpark {
 				System.out.println("--> " + t);
 		}
 
-		public static void computeTopKHashtags(Connection connection, JavaRDD<Tweet> jsonRDD, JavaSparkContext context) {
+		public static void computeTopKHashtags(Connection connection, JavaSparkContext context) {
 			final String localTable = "bah-simba_topK_hashtags";
 			createTableTopKHashtags(connection);
-			JavaRDD<HashTag> pairRdd  = jsonRDD
+
+			JavaPairRDD<String, HashTag> unionRdds = JavaPairRDD.fromJavaRDD(context.emptyRDD());
+			for (int i=1; i<=21; i++) {
+				String path = getPath(i);
+				JavaRDD<Tweet> jsonRDD = loadAndParseFileFromHDFS(context, path);
+				unionRdds = jsonRDD
 						.filter(tweet -> tweet.entities != null && !tweet.entities.hastagsToString().equals(""))
 						.flatMapToPair(tweet -> {
 							List<Tuple2<String, HashTag>> list = new ArrayList<>();
@@ -432,12 +437,16 @@ public class TPSpark {
 						.reduceByKey((h1, h2) -> {
 							h1.mergeCounters(h2);
 							return h1;
-						}).values();
-			JavaRDD<HashTag> hehe = context.parallelize(pairRdd.top(1000));
+						})
+						.union(unionRdds)
+						.reduceByKey((h1, h2) -> {
+							h1.mergeCounters(h2);
+							return h1;
+						});
+			}
+
+			JavaRDD<HashTag> hehe = context.parallelize(unionRdds.values().top(10000));
 	
-			//*
-			
-			AtomicInteger id = new AtomicInteger();
 			JavaPairRDD<ImmutableBytesWritable, Put> hbasePuts = hehe.zipWithIndex().mapToPair(
 				hashtag -> {
 					Put put = new Put(Bytes.toBytes(String.valueOf(hashtag._2())));
@@ -446,32 +455,9 @@ public class TPSpark {
 					return new Tuple2<ImmutableBytesWritable, Put>(new ImmutableBytesWritable(), put);    
 				}
 			);
-			//*/
 
-			Configuration myConfig = null;
-			try {
-				myConfig =   HBaseConfiguration.create();
-				myConfig.set("hbase.mapred.outputtable", localTable);
-				myConfig.set("mapreduce.outputformat.class", "org.apache.hadoop.hbase.mapreduce.TableOutputFormat");
-				HBaseAdmin.checkHBaseAvailable(myConfig);
-				System.out.println("===> Hbase is running");
-			} catch (MasterNotRunningException e) {
-				System.out.println("===> Hbase is not running");
-				System.exit(1);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			myConfig.set("mapreduce.output.fileoutputformat.outputdir", "/tmp");
-		
-			Job newAPIJobConfiguration1 = null;
-			try {
-				newAPIJobConfiguration1 = Job.getInstance(myConfig);
-			} catch(Exception e) {
-				e.printStackTrace();
-				System.exit(-1);
-			}
-			newAPIJobConfiguration1.getConfiguration().set(TableOutputFormat.OUTPUT_TABLE, localTable);
-			newAPIJobConfiguration1.setOutputFormatClass(TableOutputFormat.class);
+			Configuration myConfig = getHbaseConfiguration(localTable);
+			Job newAPIJobConfiguration1 = getNewAPIJobConfiguration(localTable, myConfig);
 
 			hbasePuts.saveAsNewAPIHadoopDataset(newAPIJobConfiguration1.getConfiguration());
 		}
@@ -544,8 +530,8 @@ public class TPSpark {
 			//computeNumberTweetsByLang(connection, context);
 			//computeUsersHashtags(connection, context);
 			//computeUsersByHashtag(connection, jsonRDD);
-			//computeTopKHashtags(connection, jsonRDD, context);
-			computeTopKHashtagsByDay(connection, context);
+			computeTopKHashtags(connection, context);
+			//computeTopKHashtagsByDay(connection, context);
 
 			return 0;
 		}
