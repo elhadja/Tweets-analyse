@@ -27,8 +27,7 @@ router.get('/usersByHashtag/:hashtagId', (req, res) => {
         }
       }
       else {
-        console.log("error when getting row: ", error);
-        res.json(error);
+        res.render("hashtags", { error });
       }
     })
  
@@ -51,8 +50,8 @@ router.get('/count/:hashtagId', (req, res) => {
         }
       }
       else {
-        console.log("error when getting row: ", error);
-        res.json(error);
+        errorCount = error;
+        res.render("hashtags", {errorCount});
       }
     })
 });
@@ -94,7 +93,6 @@ router.get('/topkByDay/:day/:k', (req, res) => {
       topkByDay = {
         hashtags: rows
       }
-      console.log(rows);
       res.status(200).render("hashtags", {topkByDay});
     } else {
       res.json("erreur");

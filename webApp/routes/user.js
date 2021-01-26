@@ -14,7 +14,7 @@ router.get('/tweets/:userId', (req, res) => {
     .get({from: 1285942515900}, (error, value) => {
       if (!error) {
         try {
-          userInfos = {
+          const userInfos = {
             name: value[0].$,
             numberTweets: value[1].$
           };
@@ -49,10 +49,10 @@ router.get('/userHashtags/:userId', (req, res) => {
         }
       }
       else {
-        error = {
+        const errorList = {
           value: "user not found"
         }
-        res.render("home", {error});
+        res.render("home", {errorList});
       }
     })
 

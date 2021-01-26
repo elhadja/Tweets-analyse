@@ -7,7 +7,7 @@
                     <%- include('menu'); %>
                 </div>
             </div>
-            <div class="row mg">
+            <div class="row">
                 <div class="col">
                     <h1>Compter le nombre de tweets d'un utilisateur</h1>
                     <form method="get" onsubmit="setAction(this,'/user/tweets', 'userIdInput')">
@@ -18,16 +18,13 @@
                     </form>
                     <% if (typeof userInfos != 'undefined') { %>
                     <div>
-                        <p>
+                        <p class="labelResult">
                             Nom: <%= userInfos.name %> <br>
                             Nombre de tweets: <%= userInfos.numberTweets %>
                         </p>
-                    </div>
-                    <% } %>
-
-                    <% if (typeof error != 'undefined') { %>
-                        <p class="error"><%= error.value %></p>
-                        <% error = undefined; %>
+                     </div>
+                    <% } else if (typeof error != 'undefined') { %>
+                      <p class="error"><%= error.value %></p>
                     <% } %>
                 </div>
             </div>
@@ -75,10 +72,8 @@
                         </ul>
 
                     </div>
-                    <% } %>
-                   <% if (typeof error != 'undefined') { %>
-                        <p class="error"><%= error.value %></p>
-                        <% error = undefined; %>
+                   <% } else if (typeof errorList != 'undefined') { %>
+                        <p class="error"><%= errorList.value %></p>
                     <% } %>
                 </div>
             </div>

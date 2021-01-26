@@ -504,7 +504,7 @@ public class TPSpark {
 			//computeNumberTweetsByUser(connection, context);
 			//computeNumberTweetsByLang(connection, context);
 			//computeUsersHashtags(connection, context);
-			computeUsersByHashtag(connection, context);
+			//computeUsersByHashtag(connection, context);
 			//computeTopKHashtags(connection, context);
 			//computeTopKHashtagsByDay(connection, context);
 
