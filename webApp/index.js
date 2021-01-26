@@ -1,6 +1,5 @@
 const express = require('express')
 const app = express()
-var eclairjs = require('eclairjs');
 const ejs = require('ejs');
 const path = require('path');
 

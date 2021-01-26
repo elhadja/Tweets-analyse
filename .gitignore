@@ -1,1 +1,4 @@
 webApp/node_modules
+/.idea/
+/spark_maven/TPSpark.iml
+/spark_maven/target/

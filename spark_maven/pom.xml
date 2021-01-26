@@ -58,7 +58,7 @@
   			<configuration>
   				<archive>
   					<manifest>
-  						<mainClass>bigdata.TPSpark</mainClass>
+  						<mainClass>bigdata.TPFlo</mainClass>
   					</manifest>
   				</archive>
   			</configuration>

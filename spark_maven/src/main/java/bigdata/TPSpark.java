@@ -6,21 +6,9 @@ import java.io.IOException;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.JavaRDD;
-import org.apache.spark.api.java.function.PairFunction;
 import org.apache.spark.api.java.JavaPairRDD;
-import org.apache.spark.api.java.JavaDoubleRDD;
-import org.apache.spark.util.StatCounter;
 
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-import sun.security.krb5.Config;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -33,28 +21,20 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableOutputFormat;
-import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 
-import java.util.Arrays;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.Iterator;
 
 import com.google.gson.GsonBuilder;
-import org.json.JSONObject;
-
-import java.nio.charset.Charset;
 
 
 import scala.Tuple2;
@@ -197,72 +177,6 @@ public class TPSpark {
 		}
 
 
-		public static void computeNumberTweetsByUser(Connection connection, JavaSparkContext context) {
-			final String localTable = "bah-simba_tweets_by_user";
-			createTableTweetsByUser(connection);
-
-			JavaPairRDD<String, User> unionRdds = JavaPairRDD.fromJavaRDD(context.emptyRDD());
-			for (int i=1; i<=21; i++) {
-				String path = (i < 10) ? "/raw_data/tweet_0" + i + "_03_2020.nljson" : "/raw_data/tweet_" + i + "_03_2020.nljson";
-				JavaRDD<Tweet> jsonRDD = loadAndParseFileFromHDFS(context, path);
-				unionRdds = jsonRDD
-						.mapToPair(tweet -> new Tuple2<>(tweet.user.getId(), tweet.user))
-						.reduceByKey((user1, user2) -> {
-							user1.mergeNumberTweets(user2);
-							return user1;
-						})
-						.union(unionRdds)
-						.reduceByKey((user1, user2) -> {
-							user1.mergeNumberTweets(user2);
-							return user1;
-						});
-			}
-
-			JavaPairRDD<ImmutableBytesWritable, Put> hbasePuts = unionRdds.mapToPair(
-				tuple -> {
-					Put put = new Put(Bytes.toBytes(tuple._1()));
-					put.addColumn(USER_NAME_FAMILLY, Bytes.toBytes(""), Bytes.toBytes(tuple._2().getName()));
-					put.addColumn(NUMBER_TWEETS_FAMILLY, Bytes.toBytes(""), Bytes.toBytes(String.valueOf(tuple._2().getNumberTweets())));
-
-					return new Tuple2<ImmutableBytesWritable, Put>(new ImmutableBytesWritable(), put);    
-				}
-			);
-
-			Configuration myConfig = getHbaseConfiguration(localTable);
-			Job newAPIJobConfiguration1 = getNewAPIJobConfiguration(localTable, myConfig);
-
-			hbasePuts.saveAsNewAPIHadoopDataset(newAPIJobConfiguration1.getConfiguration());
-		}
-
-
-		public static void computeNumberTweetsByLang(Connection connection, JavaSparkContext context) {
-			final String localTable = "bah-simba_tweets_by_lang";
-			createTableTweetsByLang(connection);
-
-			JavaPairRDD<String, Integer> unionRdds = JavaPairRDD.fromJavaRDD(context.emptyRDD());
-
-
-			for (int i=1; i<=21; i++) {
-				String path = (i < 10) ? "/raw_data/tweet_0" + i + "_03_2020.nljson" : "/raw_data/tweet_" + i + "_03_2020.nljson";
-				JavaRDD<Tweet> jsonRDD = loadAndParseFileFromHDFS(context, path);
-				unionRdds = jsonRDD
-						.mapToPair(tweet -> new Tuple2<>(tweet.getLang(), 1))
-						.reduceByKey((n1, n2) -> n1 + n2)
-						.union(unionRdds)
-						.reduceByKey((n1, n2) -> n1 + n2);
-			}
-
-			JavaPairRDD<ImmutableBytesWritable, Put> hbasePuts = unionRdds.mapToPair(tuple -> {
-							Put put = new Put(Bytes.toBytes(tuple._1()));
-							put.addColumn(NUMBER_TWEETS_FAMILLY, Bytes.toBytes(""), Bytes.toBytes(String.valueOf(tuple._2())));
-							return new Tuple2<ImmutableBytesWritable, Put>(new ImmutableBytesWritable(), put);    
-						});
-
-			Configuration myConfig = getHbaseConfiguration(localTable);
-			Job newAPIJobConfiguration1 = getNewAPIJobConfiguration(localTable, myConfig);
-
-			hbasePuts.saveAsNewAPIHadoopDataset(newAPIJobConfiguration1.getConfiguration());
-		}
 
 		public static JavaRDD<Tweet> loadAndParseFileFromHDFS(JavaSparkContext context, String path) {
 			JavaRDD<String> fileRDD = context.textFile(path);
@@ -313,6 +227,80 @@ public class TPSpark {
 			return (i < 10) ? "/raw_data/tweet_0" + i + "_03_2020.nljson" : "/raw_data/tweet_" + i + "_03_2020.nljson";
 		}
 
+		public static <T> void printRDD(JavaRDD<T> rdd) {
+			List<T> list = rdd.take(11);
+			for (T t : list)
+				System.out.println("--> " + t);
+		}
+
+
+
+		public static void computeNumberTweetsByUser(Connection connection, JavaSparkContext context) {
+			final String localTable = "bah-simba_tweets_by_user";
+			createTableTweetsByUser(connection);
+
+			JavaPairRDD<String, User> unionRdds = JavaPairRDD.fromJavaRDD(context.emptyRDD());
+			for (int i=1; i<=21; i++) {
+				String path = (i < 10) ? "/raw_data/tweet_0" + i + "_03_2020.nljson" : "/raw_data/tweet_" + i + "_03_2020.nljson";
+				JavaRDD<Tweet> jsonRDD = loadAndParseFileFromHDFS(context, path);
+				unionRdds = jsonRDD
+						.mapToPair(tweet -> new Tuple2<>(tweet.user.getId(), tweet.user))
+						.reduceByKey((user1, user2) -> {
+							user1.mergeNumberTweets(user2);
+							return user1;
+						})
+						.union(unionRdds)
+						.reduceByKey((user1, user2) -> {
+							user1.mergeNumberTweets(user2);
+							return user1;
+						});
+			}
+
+			JavaPairRDD<ImmutableBytesWritable, Put> hbasePuts = unionRdds.mapToPair(
+					tuple -> {
+						Put put = new Put(Bytes.toBytes(tuple._1()));
+						put.addColumn(USER_NAME_FAMILLY, Bytes.toBytes(""), Bytes.toBytes(tuple._2().getName()));
+						put.addColumn(NUMBER_TWEETS_FAMILLY, Bytes.toBytes(""), Bytes.toBytes(String.valueOf(tuple._2().getNumberTweets())));
+
+						return new Tuple2<ImmutableBytesWritable, Put>(new ImmutableBytesWritable(), put);
+					}
+			);
+
+			Configuration myConfig = getHbaseConfiguration(localTable);
+			Job newAPIJobConfiguration1 = getNewAPIJobConfiguration(localTable, myConfig);
+
+			hbasePuts.saveAsNewAPIHadoopDataset(newAPIJobConfiguration1.getConfiguration());
+		}
+
+		public static void computeNumberTweetsByLang(Connection connection, JavaSparkContext context) {
+			final String localTable = "bah-simba_tweets_by_lang";
+			createTableTweetsByLang(connection);
+
+			JavaPairRDD<String, Integer> unionRdds = JavaPairRDD.fromJavaRDD(context.emptyRDD());
+
+
+			for (int i=1; i<=21; i++) {
+				String path = (i < 10) ? "/raw_data/tweet_0" + i + "_03_2020.nljson" : "/raw_data/tweet_" + i + "_03_2020.nljson";
+				JavaRDD<Tweet> jsonRDD = loadAndParseFileFromHDFS(context, path);
+				unionRdds = jsonRDD
+						.mapToPair(tweet -> new Tuple2<>(tweet.getLang(), 1))
+						.reduceByKey((n1, n2) -> n1 + n2)
+						.union(unionRdds)
+						.reduceByKey((n1, n2) -> n1 + n2);
+			}
+
+			JavaPairRDD<ImmutableBytesWritable, Put> hbasePuts = unionRdds.mapToPair(tuple -> {
+				Put put = new Put(Bytes.toBytes(tuple._1()));
+				put.addColumn(NUMBER_TWEETS_FAMILLY, Bytes.toBytes(""), Bytes.toBytes(String.valueOf(tuple._2())));
+				return new Tuple2<ImmutableBytesWritable, Put>(new ImmutableBytesWritable(), put);
+			});
+
+			Configuration myConfig = getHbaseConfiguration(localTable);
+			Job newAPIJobConfiguration1 = getNewAPIJobConfiguration(localTable, myConfig);
+
+			hbasePuts.saveAsNewAPIHadoopDataset(newAPIJobConfiguration1.getConfiguration());
+		}
+
 		public static void computeUsersHashtags(Connection connection, JavaSparkContext context) {
 			final String localTable = "bah-simba_users_hashtags";
 			createTableUsersHashtags(connection);
@@ -322,9 +310,9 @@ public class TPSpark {
 				String path = getPath(i);
 				JavaRDD<Tweet> jsonRDD = loadAndParseFileFromHDFS(context, path);
 				unionRdds = jsonRDD
-						.filter(tweet -> tweet.entities != null && !tweet.entities.hastagsToString().equals(""))
+						.filter(tweet -> tweet.entities != null && !tweet.entities.hashtagsToString().equals(""))
 						.mapToPair(tweet ->{
-							tweet.user.addHashtag(tweet.entities.hastagsToString());
+							tweet.user.addHashtag(tweet.entities.hashtagsToString());
 							return new Tuple2<>(tweet.user.getId(), tweet.user);
 						}) 
 						.reduceByKey((user1, user2) -> {
@@ -357,11 +345,11 @@ public class TPSpark {
 			final String localTable = "bah-simba_users_by_hashtag";
 			createTableUsersByHashtag(connection);
 			JavaPairRDD<String, HashTag> pairRdd  = jsonRDD
-						.filter(tweet -> tweet.entities != null && !tweet.entities.hastagsToString().equals(""))
+						.filter(tweet -> tweet.entities != null && !tweet.entities.hashtagsToString().equals(""))
 						.flatMapToPair(tweet -> {
 							List<Tuple2<String, HashTag>> list = new ArrayList<>();
 							for (HashTag h : tweet.entities.getHashtags()) {
-								h.setUsersrNames(tweet.user.getName());
+								h.setUsersNames(tweet.user.getName());
 								list.add(new Tuple2<>(h.getText(), h));
 							}
 							return list.iterator();
@@ -411,17 +399,11 @@ public class TPSpark {
 			hbasePuts.saveAsNewAPIHadoopDataset(newAPIJobConfiguration1.getConfiguration());
 		}
 
-		public static <T> void printRDD(JavaRDD<T> rdd) {
-			List<T> list = rdd.take(11);
-			for (T t : list)
-				System.out.println("--> " + t);
-		}
-
 		public static void computeTopKHashtags(Connection connection, JavaRDD<Tweet> jsonRDD, JavaSparkContext context) {
 			final String localTable = "bah-simba_topK_hashtags";
 			createTableTopKHashtags(connection);
 			JavaRDD<HashTag> pairRdd  = jsonRDD
-						.filter(tweet -> tweet.entities != null && !tweet.entities.hastagsToString().equals(""))
+						.filter(tweet -> tweet.entities != null && !tweet.entities.hashtagsToString().equals(""))
 						.flatMapToPair(tweet -> {
 							List<Tuple2<String, HashTag>> list = new ArrayList<>();
 							for (HashTag h : tweet.entities.getHashtags()) {
@@ -476,14 +458,13 @@ public class TPSpark {
 			hbasePuts.saveAsNewAPIHadoopDataset(newAPIJobConfiguration1.getConfiguration());
 		}
 
-
 		public static void computeTopKHashtagsByDay(Connection connection, JavaSparkContext context, JavaRDD<Tweet> jsonRDD) {
 			final String localTable = "bah-simba_topK_hashtags_by_day";
 
 			createTableTopKHashtagsByDay(connection);
 
 			JavaRDD<HashTag> pairRdd  = jsonRDD
-						.filter(tweet -> tweet.entities != null && !tweet.entities.hastagsToString().equals(""))
+						.filter(tweet -> tweet.entities != null && !tweet.entities.hashtagsToString().equals(""))
 						.flatMapToPair(tweet -> {
 							List<Tuple2<String, HashTag>> list = new ArrayList<>();
 							for (HashTag h : tweet.entities.getHashtags()) {
@@ -533,8 +514,6 @@ public class TPSpark {
 
 			hbasePuts.saveAsNewAPIHadoopDataset(newAPIJobConfiguration1.getConfiguration());
 		}
-
-
 
 		public int run(String[] args) throws Exception {
 			final Connection connection = ConnectionFactory.createConnection(getConf());

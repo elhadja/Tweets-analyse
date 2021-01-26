@@ -12,15 +12,15 @@ public class Entity implements Serializable{
         return hashtags;
     }
 
-    public String hastagsToString() {
-        String hastagsString = "";
+    public String hashtagsToString() {
+        String hashtagsString = "";
         for (HashTag ht : hashtags) {
-            hastagsString += ht.getText() + ",";
+            hashtagsString += ht.getText() + ",";
         }
-        return hastagsString;
+        return hashtagsString;
     }
 
     public String toString() {
-        return  "\n\thastags: " + hashtags;
+        return  "\n\thashtags: " + hashtags;
     }
 }

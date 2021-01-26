@@ -1,19 +1,29 @@
 package bigdata;
 
+
+import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.lang.Comparable;
+import java.util.ArrayList;
+import java.util.List;
 
-public class HashTag implements Serializable, Comparable {
-    private String text;
-    private int counter;
+public class HashTags implements Serializable, Comparable {
     private int id;
     private static int staticId;
+    private int counter;
+    private String text;
+    private List<HashTag> hashTags;
     private String usersNames = "";
 
-    public HashTag() {
-        this.counter = 1;
+    public HashTags(List<HashTag> hashTags) {
         this.id = staticId;
         this.staticId += 1;
+        this.counter = 1;
+        this.hashTags = new ArrayList<>();
+        this.hashTags.addAll(hashTags);
+        this.hashTags.forEach(hashTag -> {
+            this.text += hashTag.getText() + ", ";
+        });
     }
 
     public int getId() {
@@ -36,18 +46,18 @@ public class HashTag implements Serializable, Comparable {
         this.usersNames = userName;
     }
 
-    public void mergeCounters(HashTag other) {
+    public void mergeCounters(HashTags other) {
         this.counter += other.getCounter();
     }
 
-    public void mergeUsersNames(HashTag other) {
+    public void mergeUsersNames(HashTags other) {
         this.usersNames += (other.usersNames + ",");
     }
 
     public int compareTo(Object other) {
-        if (this.counter < ((HashTag)other).getCounter())
+        if (this.counter < ((HashTags)other).getCounter())
             return -1;
-        else if (this.counter == ((HashTag)other).counter)
+        else if (this.counter == ((HashTags)other).counter)
             return 0;
         return 1;
     }
