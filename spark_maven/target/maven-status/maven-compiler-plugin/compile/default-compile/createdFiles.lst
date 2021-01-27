@@ -1,7 +1,6 @@
-bigdata/TaggedValue.class
 bigdata/TPSpark.class
 bigdata/TPSpark$HBaseProg.class
 bigdata/HashTag.class
-bigdata/Tweet.class
 bigdata/User.class
 bigdata/Entity.class
+bigdata/Tweet.class
