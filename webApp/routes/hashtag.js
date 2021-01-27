@@ -27,8 +27,7 @@ router.get('/usersByHashtag/:hashtagId', (req, res) => {
         }
       }
       else {
-        console.log("error when getting row: ", error);
-        res.json(error);
+        res.render("hashtags", { error });
       }
     })
  
@@ -51,8 +50,8 @@ router.get('/count/:hashtagId', (req, res) => {
         }
       }
       else {
-        console.log("error when getting row: ", error);
-        res.json(error);
+        errorCount = error;
+        res.render("hashtags", {errorCount});
       }
     })
 });
@@ -80,9 +79,17 @@ router.get('/topkByDay/:day/:k', (req, res) => {
   const day = req.params.day;
   client
   .table(hbaseManager.TABLE_TOPK_HASHTAGS_By_DAY)
-  .scan({}, (err, rows) => {
+  .scan({
+    filter: {
+    "op":"MUST_PASS_ALL","type":"FilterList","filters":[{
+        "op":"EQUAL",
+        "type":"RowFilter",
+        "comparator":{"value": day + "-.+","type":"RegexStringComparator"}
+      }
+    ]}
+  }, (err, rows) => {
     if (!err) {
-      rows = rows.sort((o1, o2) => {return o1.key - o2.key}).slice(0, parseInt(k, 10)*2);
+      rows = rows.sort((o1, o2) => {return o1.key.replace("-", '') - o2.key.replace("-", '')}).slice(0, parseInt(k, 10)*2);
       topkByDay = {
         hashtags: rows
       }

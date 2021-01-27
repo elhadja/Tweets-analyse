@@ -17,15 +17,19 @@
                 <button type="submit" class="btn btn-primary">valider</button>
                 </form>
             <% if (typeof users != 'undefined') { %>
-                <div>
+                <div class="tooMuch">
                         <ul class="list-group">
                             <% users.value.forEach((item) => { %>
+                                <% if (item !== '') { %>
                                 <li class="list-group-item">
                                     <span><%= item %></span> 
                                 </li>
+                                <% } %>
                             <% }); %>
                         </ul>
                 </div>
+                <% } else if (typeof error != 'undefined') { %> 
+                    <p class="error"><%= error.body %></p>
                 <% } %>
             </div>
         </div>
@@ -42,9 +46,12 @@
                 </form>
             <% if (typeof countResponse != 'undefined') { %>
                 <div>
-                    <p><%= countResponse.value %></p> 
+                    <p class="labelResult"><%= countResponse.value %></p> 
                 </div>
+                <% } else if (typeof errorCount != 'undefined') { %> 
+                    <p class="error"><%= errorCount.body %></p>
                 <% } %>
+
             </div>
         </div>
 
@@ -55,12 +62,12 @@
                 <form method="get" onsubmit="setAction(this,'/hashtag/topk', 'topkInput')">
                     <div class="form-group">
                         <label for="topkInput">Entrer un Hasthag</label>
-                        <input type="number" class="form-control" id="topkInput" aria-describedby="emailHelp" min="1" max="1000" required>
+                        <input type="number" class="form-control" id="topkInput" aria-describedby="emailHelp" min="1" max="10000" required>
                     </div>
                 <button type="submit" class="btn btn-primary">valider</button>
                 </form>
             <% if (typeof topk != 'undefined') { %>
-                <div>
+                <div class="tooMuch">
                         <ul class="list-group">
                             <% topk.hashtags.forEach((item, index) => { %>
                                 <% if (index % 2 === 0) { %>
@@ -82,7 +89,7 @@
                 <form method="get" onsubmit="myAction5(this)">
                     <div class="form-group">
                         <label for="dayInput">Entrer un numéro du jour</label>
-                        <input type="number" class="form-control" id="dayInput" aria-describedby="emailHelp" min="1" max="31" required>
+                        <input type="number" class="form-control" id="dayInput" aria-describedby="emailHelp" min="1" max="21" required>
                     </div>
                     <div class="form-group">
                         <label for="topkByDayInput">Entrer k</label>
